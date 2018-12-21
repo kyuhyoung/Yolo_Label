@@ -122,13 +122,13 @@ void MainWindow::save_label_data()const
 
     if(fileOutputLabelData.is_open())
     {
-        for(int i = 0; i < ui->label_image->m_objBoundingBoxes.size(); i++)
+        for(int i = 0; i < ui->label_image->m_LicensePlateModels.size(); i++)
         {
             if(i != 0) fileOutputLabelData << '\n';
 
-            ObjectLabelingBox objBox = ui->label_image->m_objBoundingBoxes[i];
+            LicensePlateModel lpm = ui->label_image->m_LicensePlateModels[i];
 
-            if(ui->checkBox_cropping->isChecked())
+            /*if(ui->checkBox_cropping->isChecked())
             {
                 QImage cropped = ui->label_image->crop(ui->label_image->cvtRelativeToAbsoluteRectInImage(objBox.box));
 
@@ -141,22 +141,27 @@ void MainWindow::save_label_data()const
 
                     cropped.save(QString().fromStdString(strImgFile) + "_cropped_" + QString::number(i) + ".png");
                 }
-            }
+            }*/
 
-            double midX     = objBox.box.x() + objBox.box.width() / 2.;
-            double midY     = objBox.box.y() + objBox.box.height() / 2.;
-            double width    = objBox.box.width();
-            double height   = objBox.box.height();
-
-            fileOutputLabelData << objBox.label;
+            fileOutputLabelData << std::fixed << std::setprecision(6) << lpm.center.x();
             fileOutputLabelData << " ";
-            fileOutputLabelData << std::fixed << std::setprecision(6) << midX;
+            fileOutputLabelData << std::fixed << std::setprecision(6) << lpm.center.y();
             fileOutputLabelData << " ";
-            fileOutputLabelData << std::fixed << std::setprecision(6) << midY;
+            fileOutputLabelData << std::fixed << std::setprecision(6) << lpm.lengthCenterToLeftUpper;
             fileOutputLabelData << " ";
-            fileOutputLabelData << std::fixed << std::setprecision(6) << width;
+            fileOutputLabelData << std::fixed << std::setprecision(6) << lpm.lengthCenterToRightUpper;
             fileOutputLabelData << " ";
-            fileOutputLabelData << std::fixed << std::setprecision(6) << height;
+            fileOutputLabelData << std::fixed << std::setprecision(6) << lpm.lengthCenterToRightLower;
+            fileOutputLabelData << " ";
+            fileOutputLabelData << std::fixed << std::setprecision(6) << lpm.lengthCenterToLeftLower;
+            fileOutputLabelData << " ";
+            fileOutputLabelData << std::fixed << std::setprecision(6) << lpm.degCenterToLeftUpper;
+            fileOutputLabelData << " ";
+            fileOutputLabelData << std::fixed << std::setprecision(6) << lpm.degCenterToRightUpper;
+            fileOutputLabelData << " ";
+            fileOutputLabelData << std::fixed << std::setprecision(6) << lpm.degCenterToRightLower;
+            fileOutputLabelData << " ";
+            fileOutputLabelData << std::fixed << std::setprecision(6) << lpm.degCenterToLeftLower;
         }
 
         fileOutputLabelData.close();
@@ -167,7 +172,7 @@ void MainWindow::save_label_data()const
 
 void MainWindow::clear_label_data()
 {
-    ui->label_image->m_objBoundingBoxes.clear();
+    ui->label_image->m_LicensePlateModels.clear();
     ui->label_image->showImage();
 }
 

@@ -8,10 +8,19 @@
 #include <iostream>
 #include <fstream>
 
-struct ObjectLabelingBox
+struct LicensePlateModel
 {
-    int     label;
-    QRectF  box;
+    QPointF center;
+
+    double lengthCenterToLeftUpper;
+    double lengthCenterToRightUpper;
+    double lengthCenterToLeftLower;
+    double lengthCenterToRightLower;
+
+    double degCenterToLeftUpper;
+    double degCenterToRightUpper;
+    double degCenterToLeftLower;
+    double degCenterToRightLower;
 };
 
 class label_img : public QLabel
@@ -36,7 +45,7 @@ public:
 
     static  QColor BOX_COLORS[10];
 
-    QVector <ObjectLabelingBox>     m_objBoundingBoxes;
+    QVector <LicensePlateModel>     m_LicensePlateModels;
 
     void init();
     void openImage(const QString &, bool& ret);
@@ -65,8 +74,9 @@ signals:
     void Mouse_Release();
 
 private:
-    int             m_focusedObjectLabel;
-    QString         m_foucsedObjectName;
+    int                 m_focusedObjectLabel;
+    QString             m_foucsedObjectName;
+    QVector<QPointF>    m_focusedLicensePlatePoints;
 
     double m_aspectRatioWidth;
     double m_aspectRatioHeight;

@@ -1,8 +1,40 @@
 #include "label_img.h"
 #include <QPainter>
 
-using std::ifstream;
+#define _USE_MATH_DEFINES
 
+#include <math.h>
+
+using std::ifstream;
+using std::atan2;
+using std::cos;
+
+double Distance(QPointF p1, QPointF p2)
+{
+    double diffX = p1.x() - p2.x();
+    double diffY = p1.y() - p2.y();
+
+    diffX = pow(diffX, 2.0);
+    diffY = pow(diffY, 2.0);
+
+    return sqrt(diffX + diffY);
+}
+
+double Deg(QPointF p1,QPointF p2)
+{
+    double deg = atan2(p1.y() - p2.y(), p1.x() - p2.x());
+    if(deg < 0) deg += M_PI * 2.0;
+    return deg;
+}
+
+QPointF Move(QPointF center, double length, double theta)
+{
+    QPointF movedPoint;
+    movedPoint.setX(center.x() - length * cos(theta));
+    movedPoint.setY(center.y() - length * sin(theta));
+
+    return movedPoint;
+}
 QColor label_img::BOX_COLORS[10] ={  Qt::green,
         Qt::darkGreen,
         Qt::blue,
@@ -45,24 +77,49 @@ void label_img::mousePressEvent(QMouseEvent *ev)
     {
         if(m_bLabelingStarted == false)
         {
-            m_relatvie_mouse_pos_LBtnClicked_in_ui      = m_relative_mouse_pos_in_ui;
-            m_bLabelingStarted                          = true;
+            m_bLabelingStarted = true;
+            m_focusedLicensePlatePoints.push_back(m_relative_mouse_pos_in_ui);
         }
         else
         {
-            ObjectLabelingBox objBoundingbox;
+            m_focusedLicensePlatePoints.push_back(m_relative_mouse_pos_in_ui);
 
-            objBoundingbox.label    = m_focusedObjectLabel;
-            objBoundingbox.box      = getRelativeRectFromTwoPoints(m_relative_mouse_pos_in_ui,
-                                                                   m_relatvie_mouse_pos_LBtnClicked_in_ui);
+            if(m_focusedLicensePlatePoints.size() == 4)
+            {
+                LicensePlateModel lpm;
 
-            bool width_is_too_small     = objBoundingbox.box.width()  < 0.01;
-            bool height_is_too_small    = objBoundingbox.box.height() < 0.01;
+                double centerX = 0.0,
+                       centerY = 0.0;
 
-            if(!width_is_too_small && !height_is_too_small)
-                m_objBoundingBoxes.push_back(objBoundingbox);
+                for(QPointF licensePlatePoint: m_focusedLicensePlatePoints)
+                {
+                    centerX += licensePlatePoint.x();
+                    centerY += licensePlatePoint.y();
+                }
 
-            m_bLabelingStarted              = false;
+                centerX /= 4.0;
+                centerY /= 4.0;
+
+                lpm.center = QPointF(centerX, centerY);
+
+                lpm.lengthCenterToLeftUpper     = Distance(lpm.center, m_focusedLicensePlatePoints[0]);
+                lpm.lengthCenterToRightUpper    = Distance(lpm.center, m_focusedLicensePlatePoints[1]);
+                lpm.lengthCenterToRightLower    = Distance(lpm.center, m_focusedLicensePlatePoints[2]);
+                lpm.lengthCenterToLeftLower     = Distance(lpm.center, m_focusedLicensePlatePoints[3]);
+
+                lpm.degCenterToLeftUpper     = Deg(lpm.center, m_focusedLicensePlatePoints[0]);
+                lpm.degCenterToRightUpper    = Deg(lpm.center, m_focusedLicensePlatePoints[1]);
+                lpm.degCenterToRightLower    = Deg(lpm.center, m_focusedLicensePlatePoints[2]);
+                lpm.degCenterToLeftLower     = Deg(lpm.center, m_focusedLicensePlatePoints[3]);
+
+//                std::cout<< "lpm.degCenterToLeftUpper: " << lpm.degCenterToLeftUpper * 180.0/3.141592 << std::endl;
+//                std::cout<< "lpm.degCenterToRightUpper: " << lpm.degCenterToRightUpper* 180.0/3.141592 << std::endl;
+//                std::cout<< "lpm.degCenterToLeftLower: " << lpm.degCenterToLeftLower* 180.0/3.141592 << std::endl;
+//                std::cout<< "lpm.degCenterToRightLower: " << lpm.degCenterToRightLower* 180.0/3.141592 << std::endl;
+
+                m_LicensePlateModels.push_back(lpm);
+                m_focusedLicensePlatePoints.clear();
+            }
 
             showImage();
         }
@@ -79,7 +136,9 @@ void label_img::mouseReleaseEvent(QMouseEvent *ev)
 
 void label_img::init()
 {
-    m_objBoundingBoxes.clear();
+    m_LicensePlateModels.clear();
+    m_focusedLicensePlatePoints.clear();
+
     m_bLabelingStarted              = false;
     m_focusedObjectLabel            = 0;
 
@@ -114,13 +173,15 @@ void label_img::openImage(const QString &qstrImg, bool &ret)
     if(img.isNull())
     {
         m_inputImg = QImage();
+
         ret = false;
     }
     else
     {
         ret = true;
 
-        m_objBoundingBoxes.clear();
+        m_LicensePlateModels.clear();
+        m_focusedLicensePlatePoints.clear();
 
         m_inputImg          = img.copy();
         m_inputImg          = m_inputImg.convertToFormat(QImage::Format_RGB888);
@@ -172,27 +233,25 @@ void label_img::loadLabelData(const QString& labelFilePath)
         while(inputFile >> inputFileValue)
             inputFileValues.push_back(inputFileValue);
 
-        for(int i = 0; i < inputFileValues.size(); i += 5)
+        for(int i = 0; i < inputFileValues.size(); i += 10)
         {
             try {
-                ObjectLabelingBox objBox;
+                LicensePlateModel lpm;
 
-                objBox.label = static_cast<int>(inputFileValues.at(i));
+                lpm.center.setX(inputFileValues.at(i));
+                lpm.center.setY(inputFileValues.at(i + 1));
 
-                double midX     = inputFileValues.at(i + 1);
-                double midY     = inputFileValues.at(i + 2);
-                double width    = inputFileValues.at(i + 3);
-                double height   = inputFileValues.at(i + 4);
+                lpm.lengthCenterToLeftUpper = inputFileValues.at(i + 2);
+                lpm.lengthCenterToRightUpper = inputFileValues.at(i + 3);
+                lpm.lengthCenterToRightLower =inputFileValues.at(i + 4);
+                lpm.lengthCenterToLeftLower = inputFileValues.at(i + 5);
 
-                double leftX    = midX - width/2.;
-                double topY     = midY - height/2.;
+                lpm.degCenterToLeftUpper =inputFileValues.at(i + 6);
+                lpm.degCenterToRightUpper =inputFileValues.at(i + 7);
+                lpm.degCenterToRightLower=inputFileValues.at(i + 8);
+                lpm.degCenterToLeftLower=inputFileValues.at(i + 9);
 
-                objBox.box.setX(leftX); // translation: midX -> leftX
-                objBox.box.setY(topY); // translation: midY -> topY
-                objBox.box.setWidth(width);
-                objBox.box.setHeight(height);
-
-                m_objBoundingBoxes.push_back(objBox);
+                m_LicensePlateModels.push_back(lpm);
             }
             catch (const std::out_of_range& e) {
                 std::cout << "loadLabelData: Out of Range error.";
@@ -251,26 +310,80 @@ void label_img::drawFocusedObjectBox(QPainter& painter, Qt::GlobalColor color, i
         pen.setColor(color);
         painter.setPen(pen);
 
+        for(QPointF licensePlatePointF: m_focusedLicensePlatePoints)
+        {
+            QPoint licensePlatePoint = cvtRelativeToAbsolutePoint(licensePlatePointF);
+            painter.drawEllipse(licensePlatePoint.x(), licensePlatePoint.y(), 2, 2);
+        }
+
+        if(m_focusedLicensePlatePoints.size() >= 2)
+        {
+            for(int i = 1; i < m_focusedLicensePlatePoints.size(); i++)
+            {
+                QPoint licensePlatePoint1 = cvtRelativeToAbsolutePoint(m_focusedLicensePlatePoints[i]);
+                QPoint licensePlatePoint2 = cvtRelativeToAbsolutePoint(m_focusedLicensePlatePoints[i - 1]);
+
+                painter.drawLine(licensePlatePoint1, licensePlatePoint2);
+            }
+
+            if(m_focusedLicensePlatePoints.size() == 4)
+            {
+                QPoint licensePlatePointBegin = cvtRelativeToAbsolutePoint(m_focusedLicensePlatePoints[0]);
+                QPoint licensePlatePointLast = cvtRelativeToAbsolutePoint(m_focusedLicensePlatePoints.last());
+                painter.drawLine(licensePlatePointBegin, licensePlatePointLast);
+            }
+        }
+
+
+
         //relative coord to absolute coord
 
-        QPoint absolutePoint1 = cvtRelativeToAbsolutePoint(m_relatvie_mouse_pos_LBtnClicked_in_ui);
-        QPoint absolutePoint2 = cvtRelativeToAbsolutePoint(m_relative_mouse_pos_in_ui);
+//        QPoint absolutePoint1 = cvtRelativeToAbsolutePoint(m_relatvie_mouse_pos_LBtnClicked_in_ui);
+//        QPoint absolutePoint2 = cvtRelativeToAbsolutePoint(m_relative_mouse_pos_in_ui);
 
-        painter.drawRect(QRect(absolutePoint1, absolutePoint2));
+//        painter.drawRect(QRect(absolutePoint1, absolutePoint2));
     }
 }
 
 void label_img::drawObjectBoxes(QPainter& painter, int thickWidth)
 {
     QPen pen;
+
     pen.setWidth(thickWidth);
+    pen.setColor(Qt::GlobalColor::green);
+    painter.setPen(pen);
 
-    for(ObjectLabelingBox boundingbox: m_objBoundingBoxes)
+    for(LicensePlateModel licensePlateModel: m_LicensePlateModels)
     {
-        pen.setColor(m_drawObjectBoxColor.at(boundingbox.label));
-        painter.setPen(pen);
+        QPoint center = cvtRelativeToAbsolutePoint(licensePlateModel.center);
+        painter.drawEllipse(center, 2, 2);
 
-        painter.drawRect(cvtRelativeToAbsoluteRectInUi(boundingbox.box));
+        QPointF leftUpperPointf     = Move(licensePlateModel.center, licensePlateModel.lengthCenterToLeftUpper, licensePlateModel.degCenterToLeftUpper);
+        QPointF rightUpperPointf    = Move(licensePlateModel.center, licensePlateModel.lengthCenterToRightUpper, licensePlateModel.degCenterToRightUpper);
+
+        QPointF leftLowerPointf     = Move(licensePlateModel.center, licensePlateModel.lengthCenterToLeftLower, licensePlateModel.degCenterToLeftLower);
+        QPointF rightLowerPointf    = Move(licensePlateModel.center, licensePlateModel.lengthCenterToRightLower, licensePlateModel.degCenterToRightLower);
+
+        QPoint leftUpperPoint     = cvtRelativeToAbsolutePoint(leftUpperPointf);
+        QPoint rightUpperPoint    = cvtRelativeToAbsolutePoint(rightUpperPointf);
+
+        QPoint leftLowerPoint     = cvtRelativeToAbsolutePoint(leftLowerPointf);
+        QPoint rightLowerPoint    = cvtRelativeToAbsolutePoint(rightLowerPointf);
+
+
+//        painter.drawEllipse(leftUpperPoint, 5, 5);
+//        painter.drawEllipse(rightUpperPoint, 5, 5);
+
+//        painter.drawEllipse(rightLowerPoint, 5, 5);
+
+
+        painter.drawLine(leftUpperPoint, rightUpperPoint);
+        painter.drawLine(rightUpperPoint, rightLowerPoint);
+        painter.drawLine(rightLowerPoint, leftLowerPoint);
+        painter.drawLine(leftLowerPoint, leftUpperPoint);
+
+
+//        painter.drawRect(cvtRelativeToAbsoluteRectInUi(boundingbox.box));
     }
 }
 
@@ -279,25 +392,25 @@ void label_img::removeFocusedObjectBox(QPointF point)
     int     removeBoxIdx = -1;
     double  nearestBoxDistance   = 99999999999999.;
 
-    for(int i = 0; i < m_objBoundingBoxes.size(); i++)
-    {
-        QRectF objBox = m_objBoundingBoxes.at(i).box;
+//    for(int i = 0; i < m_objBoundingBoxes.size(); i++)
+//    {
+//        QRectF objBox = m_objBoundingBoxes.at(i).box;
 
-        if(objBox.contains(point))
-        {
-            double distance = objBox.width() + objBox.height();
-            if(distance < nearestBoxDistance)
-            {
-                nearestBoxDistance = distance;
-                removeBoxIdx = i;
-            }
-        }
-    }
+//        if(objBox.contains(point))
+//        {
+//            double distance = objBox.width() + objBox.height();
+//            if(distance < nearestBoxDistance)
+//            {
+//                nearestBoxDistance = distance;
+//                removeBoxIdx = i;
+//            }
+//        }
+//    }
 
-    if(removeBoxIdx != -1)
-    {
-        m_objBoundingBoxes.remove(removeBoxIdx);
-    }
+//    if(removeBoxIdx != -1)
+//    {
+//        m_objBoundingBoxes.remove(removeBoxIdx);
+//    }
 }
 
 QRectF label_img::getRelativeRectFromTwoPoints(QPointF p1, QPointF p2)
