@@ -1,5 +1,7 @@
 #include "label_img.h"
+#include "characterclassifierdialog.h"
 #include <QPainter>
+#include <QString>
 
 using std::ifstream;
 
@@ -16,14 +18,13 @@ QColor label_img::BOX_COLORS[10] ={  Qt::green,
 
 label_img::label_img(QWidget *parent)
     :QLabel(parent)
+    ,m_bSaveCharacter(false)
 {
     init();
 }
 
 void label_img::mouseMoveEvent(QMouseEvent *ev)
 {
-    std::cout<< "moved"<< std::endl;
-
     setMousePosition(ev->x(), ev->y());
 
     showImage();
@@ -32,8 +33,6 @@ void label_img::mouseMoveEvent(QMouseEvent *ev)
 
 void label_img::mousePressEvent(QMouseEvent *ev)
 {
-    std::cout<< "clicked"<< std::endl;
-
     setMousePosition(ev->x(), ev->y());
 
     if(ev->button() == Qt::RightButton)
@@ -64,6 +63,116 @@ void label_img::mousePressEvent(QMouseEvent *ev)
 
             m_bLabelingStarted              = false;
 
+            if(m_bSaveCharacter == true)
+            {
+            CharacterClassifierDialog* CCD = new CharacterClassifierDialog();
+
+            if(CCD->exec() == QDialog::Accepted && CCD->getCharacterIndex() != -1)
+            {
+                std::cout<< "kk" << CCD->getCharacterIndex() <<std::endl;
+                QImage characterImage = crop(cvtRelativeToAbsoluteRectInImage(objBoundingbox.box));
+
+                QString strCharacters[] = {"0",
+                                        "1",
+                                        "2",
+                                        "3",
+                                        "4",
+                                        "5",
+                                        "6",
+                                        "7",
+                                        "8",
+                                        "9",
+                                        "Ga",
+                                        "Na",
+                                        "Da",
+                                        "Ra",
+                                        "Ma",
+                                       "Ba",
+                                       "Sa",
+                                       "A",
+                                       "Ja",
+                                        "Ha",
+                                        "Geo",
+                                        "Neo",
+                                        "Deo",
+                                        "Reo",
+                                        "Meo",
+                                        "Beo",
+                                        "Seo",
+                                        "Eo",
+                                        "Jeo",
+                                        "Heo",
+                                        "Go",
+                                        "No",
+                                        "Do",
+                                        "Ro",
+                                        "Mo",
+                                        "Bo",
+                                        "So",
+                                        "O",
+                                        "Jo",
+                                        "Ho" ,
+                                        "Gu",
+                                        "Nu",
+                                        "Du",
+                                        "Ru",
+                                        "Mu",
+                                        "Bu",
+                                        "Su",
+                                        "U",
+                                        "Ju",
+                                        "Bae",
+                                        "Seoul",
+                                        "Busan",
+                                        "Daegu",
+                                        "Gwangju",
+                                        "Incheon",
+                                        "Daejeon",
+                                        "Ulsan",
+                                        "Gyeonggi",
+                                        "Gangwon",
+                                        "Chungbuk",
+                                        "Chungnam",
+                                        "Jeonbuk",
+                                        "Jeonnam",
+                                        "Gyeongbuk",
+                                        "Gyeongnam",
+                                        "Jeju",
+                                        "Ul",
+                                        "Bu",
+                                        "San",
+                                        "Dae",
+                                        "Gwang",
+                                        "In",
+                                        "Cheon",
+                                        "Jeon",
+                                        "Gyeong",
+                                        "Gi",
+                                        "Gang",
+                                        "Won",
+                                        "Chung",
+                                        "Nam",
+                                        "Buk",
+                                        "Je"};
+
+                std::string strImgFile   = m_imgFileName.toStdString();
+
+                strImgFile = strImgFile.substr( strImgFile.find_last_of('/') + 1,
+                                                strImgFile.find_last_of('.') - strImgFile.find_last_of('/') - 1);
+
+
+                characterImage.save(QString("CroppedCharacters/")
+                                    + strCharacters[CCD->getCharacterIndex()]
+                                    + "/"
+                                    + QString().fromStdString(strImgFile)
+                                    + "_character_"
+                                    + QString::number(m_charNum++)
+                                    + ".png");
+            };
+
+            delete CCD;
+            }
+
             showImage();
         }
     }
@@ -73,7 +182,6 @@ void label_img::mousePressEvent(QMouseEvent *ev)
 
 void label_img::mouseReleaseEvent(QMouseEvent *ev)
 {
-    std::cout<< "released"<< std::endl;
     emit Mouse_Release();
 }
 
@@ -122,6 +230,8 @@ void label_img::openImage(const QString &qstrImg, bool &ret)
 
         m_objBoundingBoxes.clear();
 
+        m_imgFileName       = qstrImg;
+        m_charNum           = 0 ;
         m_inputImg          = img.copy();
         m_inputImg          = m_inputImg.convertToFormat(QImage::Format_RGB888);
 
@@ -145,7 +255,7 @@ void label_img::showImage()
 {
     if(m_inputImg.isNull()) return;
 
-    QImage imageOnUi = m_inputImg.scaled(this->width(), this->height());
+    QImage imageOnUi = m_inputImg.scaled(this->width(), this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
 
     QPainter painter(&imageOnUi);
 
@@ -211,6 +321,11 @@ void label_img::setFocusObjectName(QString qstrName)
     m_foucsedObjectName = qstrName;
 }
 
+void label_img::setSaveCharacter(bool b)
+{
+    m_bSaveCharacter = b;
+}
+
 bool label_img::isOpened()
 {
     return !m_inputImg.isNull();
@@ -233,12 +348,9 @@ void label_img::drawCrossLine(QPainter& painter, QColor color, int thickWidth)
 
     QPoint absolutePoint = cvtRelativeToAbsolutePoint(m_relative_mouse_pos_in_ui);
 
-    std::cout <<"absolutePoint.x() = "<< absolutePoint.x() << std::endl;
     //draw cross line
     painter.drawLine(QPoint(absolutePoint.x(),0), QPoint(absolutePoint.x(), this->height() - 1));
     painter.drawLine(QPoint(0,absolutePoint.y()), QPoint(this->width() - 1, absolutePoint.y()));
-
-    std::cout << "draw Cross Line" << std::endl;
 }
 
 void label_img::drawFocusedObjectBox(QPainter& painter, Qt::GlobalColor color, int thickWidth)
