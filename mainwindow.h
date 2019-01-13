@@ -44,6 +44,8 @@ private slots:
 
     void on_horizontalSlider_images_sliderMoved(int );
 
+    void on_radioButton_crop_characters_toggled(bool checked);
+
 private:
     void            init();
     void            init_table_widget();
@@ -68,6 +70,9 @@ private:
     void            open_obj_file(bool&);
 
     void            reupdate_img_list();
+
+    void            make_license_plate_dir();
+    void            make_korean_characters_dir();
 
     Ui::MainWindow *ui;
 

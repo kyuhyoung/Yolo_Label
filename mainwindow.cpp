@@ -1,6 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-
+#include "characterclassifierdialog.h"
 #include <QFileDialog>
 #include <QColorDialog>
 #include <QKeyEvent>
@@ -29,6 +29,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(new QShortcut(QKeySequence(Qt::Key_A), this), SIGNAL(activated()), this, SLOT(prev_img()));
     connect(new QShortcut(QKeySequence(Qt::Key_D), this), SIGNAL(activated()), this, SLOT(next_img()));
     connect(new QShortcut(QKeySequence(Qt::Key_Space), this), SIGNAL(activated()), this, SLOT(next_img()));
+
+    make_license_plate_dir();
+    make_korean_characters_dir();
 
     init_table_widget();
 }
@@ -128,7 +131,7 @@ void MainWindow::save_label_data()const
 
             ObjectLabelingBox objBox = ui->label_image->m_objBoundingBoxes[i];
 
-            if(ui->checkBox_cropping->isChecked())
+            if(ui->radioButton_crop_license_plate->isChecked())
             {
                 QImage cropped = ui->label_image->crop(ui->label_image->cvtRelativeToAbsoluteRectInImage(objBox.box));
 
@@ -139,7 +142,7 @@ void MainWindow::save_label_data()const
                     strImgFile = strImgFile.substr( strImgFile.find_last_of('/') + 1,
                                                     strImgFile.find_last_of('.') - strImgFile.find_last_of('/') - 1);
 
-                    cropped.save(QString().fromStdString(strImgFile) + "_cropped_" + QString::number(i) + ".png");
+                    cropped.save(QString("CroppedLicensePlate/") + QString().fromStdString(strImgFile) + "_cropped_" + QString::number(i) + ".png");
                 }
             }
 
@@ -318,6 +321,114 @@ void MainWindow::reupdate_img_list()
 
 }
 
+void MainWindow::make_license_plate_dir()
+{
+    if(!QDir("CroppedLicensePlate").exists())
+    {
+        QDir().mkdir("CroppedLicensePlate");
+    }
+}
+
+void MainWindow::make_korean_characters_dir()
+{
+    if(!QDir("CroppedCharacters").exists())
+    {
+        QDir().mkdir("CroppedCharacters");
+    }
+
+
+    QString strCharacters[] = {"0",
+                            "1",
+                            "2",
+                            "3",
+                            "4",
+                            "5",
+                            "6",
+                            "7",
+                            "8",
+                            "9",
+                            "Ga",
+                            "Na",
+                            "Da",
+                            "Ra",
+                            "Ma",
+                           "Ba",
+                           "Sa",
+                           "A",
+                           "Ja",
+                            "Ha",
+                            "Geo",
+                            "Neo",
+                            "Deo",
+                            "Reo",
+                            "Meo",
+                            "Beo",
+                            "Seo",
+                            "Eo",
+                            "Jeo",
+                            "Heo",
+                            "Go",
+                            "No",
+                            "Do",
+                            "Ro",
+                            "Mo",
+                            "Bo",
+                            "So",
+                            "O",
+                            "Jo",
+                            "Ho" ,
+                            "Gu",
+                            "Nu",
+                            "Du",
+                            "Ru",
+                            "Mu",
+                            "Bu",
+                            "Su",
+                            "U",
+                            "Ju",
+                            "Bae",
+                            "Seoul",
+                            "Busan",
+                            "Daegu",
+                            "Gwangju",
+                            "Incheon",
+                            "Daejeon",
+                            "Ulsan",
+                            "Gyeonggi",
+                            "Gangwon",
+                            "Chungbuk",
+                            "Chungnam",
+                            "Jeonbuk",
+                            "Jeonnam",
+                            "Gyeongbuk",
+                            "Gyeongnam",
+                            "Jeju",
+                            "Ul",
+                            "Bu",
+                            "San",
+                            "Dae",
+                            "Gwang",
+                            "In",
+                            "Cheon",
+                            "Jeon",
+                            "Gyeong",
+                            "Gi",
+                            "Gang",
+                            "Won",
+                            "Chung",
+                            "Nam",
+                            "Buk",
+                            "Je"};
+
+    for(QString strCharacter: strCharacters)
+    {
+        if(!QDir("CroppedCharacters/" + strCharacter).exists())
+        {
+            QDir().mkdir("CroppedCharacters/" + strCharacter);
+        }
+    }
+}
+
 void MainWindow::wheelEvent(QWheelEvent *ev)
 {
     if(ev->delta() > 0) // up Wheel
@@ -407,6 +518,7 @@ void MainWindow::on_tableWidget_label_cellDoubleClicked(int row, int column)
 
 void MainWindow::on_tableWidget_label_cellClicked(int row, int column)
 {
+    std::cout <<row<<std::endl;
     set_label(row);
 }
 
@@ -439,4 +551,12 @@ void MainWindow::init_table_widget()
     ui->tableWidget_label->horizontalHeader()->setStretchLastSection(true);
 
     disconnect(ui->tableWidget_label->horizontalHeader(), SIGNAL(sectionPressed(int)),ui->tableWidget_label, SLOT(selectColumn(int)));
+}
+
+void MainWindow::on_radioButton_crop_characters_toggled(bool checked)
+{
+    if(checked == true)
+    {
+        ui->label_image->setSaveCharacter(true);
+    }
 }

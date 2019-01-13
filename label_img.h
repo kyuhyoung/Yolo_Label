@@ -47,6 +47,8 @@ public:
     void setFocusObjectLabel(int);
     void setFocusObjectName(QString);
 
+    void setSaveCharacter(bool);
+
 
     bool isOpened();
     QImage crop(QRect);
@@ -67,6 +69,7 @@ signals:
 private:
     int             m_focusedObjectLabel;
     QString         m_foucsedObjectName;
+    QString         m_imgFileName;
 
     double m_aspectRatioWidth;
     double m_aspectRatioHeight;
@@ -75,6 +78,10 @@ private:
 
     QPointF m_relative_mouse_pos_in_ui;
     QPointF m_relatvie_mouse_pos_LBtnClicked_in_ui;
+
+    int m_charNum;
+
+    bool m_bSaveCharacter;
 
     void setMousePosition(int , int);
 

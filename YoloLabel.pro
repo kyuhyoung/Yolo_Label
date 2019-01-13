@@ -25,14 +25,17 @@ CONFIG += c++11
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    label_img.cpp
+    label_img.cpp \
+    characterclassifierdialog.cpp
 
 HEADERS += \
         mainwindow.h \
-    label_img.h
+    label_img.h \
+    characterclassifierdialog.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+    characterclassifierdialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
