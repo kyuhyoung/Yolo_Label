@@ -30,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(new QShortcut(QKeySequence(Qt::Key_D), this), SIGNAL(activated()), this, SLOT(next_img()));
     connect(new QShortcut(QKeySequence(Qt::Key_Space), this), SIGNAL(activated()), this, SLOT(next_img()));
 
+    make_car_dir();
     make_license_plate_dir();
     make_korean_characters_dir();
 
@@ -319,6 +320,14 @@ void MainWindow::open_obj_file(bool& ret)
 void MainWindow::reupdate_img_list()
 {
 
+}
+
+void MainWindow::make_car_dir()
+{
+    if(!QDir("Car").exists())
+    {
+        QDir().mkdir("Car");
+    }
 }
 
 void MainWindow::make_license_plate_dir()

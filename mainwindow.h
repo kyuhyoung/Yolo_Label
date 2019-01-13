@@ -71,8 +71,10 @@ private:
 
     void            reupdate_img_list();
 
+    void            make_car_dir();
     void            make_license_plate_dir();
     void            make_korean_characters_dir();
+
 
     Ui::MainWindow *ui;
 
